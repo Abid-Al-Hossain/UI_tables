@@ -91,7 +91,7 @@ export default function LivePreview({ state }: { state: TableState }) {
               </tr>
             ) : null}
             {!isLoading && !isEmpty ? tableRows.map((row, rowIndex) => (
-              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? `color-mix(in oklab, ${state.accent} 20%, transparent)` : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent" }}>
+              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? `color-mix(in oklab, ${state.accent} 20%, transparent)` : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent", transition: state.motion ? "background 0.2s ease" : "none" }}>
                 {row.values.map((value, columnIndex) => columnIndex === 0 ? (
                   <th key={`${row.key}-${tableColumns[columnIndex].key}`} scope="row" className="border-b px-4 py-3 text-left text-sm font-semibold" style={{ borderColor: state.border, color: state.foreground }}>
                     {state.selectable ? <input type="checkbox" checked={row.selected} readOnly aria-label={`Select ${row.label}`} className="mr-2 align-middle" /> : null}
