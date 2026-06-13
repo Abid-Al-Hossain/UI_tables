@@ -107,7 +107,7 @@ export default function TableComponent() {
               </tr>
             ) : null}
             {!isLoading && !isEmpty ? tableRows.map((row, rowIndex) => (
-              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? "color-mix(in oklab, " + state.accent + " 20%, transparent)" : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent", transition: state.motion ? "background 0.2s ease" : "none" }}>
+              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? "color-mix(in oklab, " + state.accent + " 20%, transparent)" : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent", transition: state.transitionDuration > 0 ? "$1" : "none" }}>
                 {row.values.map((value, columnIndex) => columnIndex === 0 ? (
                   <th key={row.key + "-" + tableColumns[columnIndex].key} scope="row" style={{ borderBottom: "1px solid " + state.border, color: state.foreground, padding: "12px 16px", textAlign: "left", fontSize: 14, fontWeight: 700 }}>
                     {state.selectable ? <input type="checkbox" checked={row.selected} readOnly aria-label={"Select " + row.label} style={{ marginRight: 8, verticalAlign: "middle" }} /> : null}

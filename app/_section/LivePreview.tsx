@@ -2,18 +2,42 @@
 
 import type { CSSProperties } from "react";
 import type { TableState } from "../types";
+import { SYSTEM_FONTS } from "@/components/shared/typography/fontConstants";
+
+function resolveFont(state: { fontBucket: "system" | "google"; googleFontFamily: string; systemFontIdx: number }): string {
+  return state.fontBucket === "google"
+    ? `"${state.googleFontFamily}", sans-serif`
+    : (SYSTEM_FONTS[state.systemFontIdx]?.css ?? "inherit");
+}
+
+function buildShadow(state: { shadowEnabled: boolean; shadowX: number; shadowY: number; shadowBlur: number; shadowSpread: number; shadowColor: string; shadowOpacity: number }): string {
+  if (!state.shadowEnabled) return "none";
+  const hex = Math.round(state.shadowOpacity * 255).toString(16).padStart(2, "0");
+  return `${state.shadowX}px ${state.shadowY}px ${state.shadowBlur}px ${state.shadowSpread}px ${state.shadowColor}${hex}`;
+}
+
+function buildRadius(state: { radiusLinked: boolean; radius: number; radiusTL: number; radiusTR: number; radiusBR: number; radiusBL: number }): string {
+  return state.radiusLinked
+    ? `${state.radius}px`
+    : `${state.radiusTL}px ${state.radiusTR}px ${state.radiusBR}px ${state.radiusBL}px`;
+}
 
 function shell(state: TableState): CSSProperties {
   return {
     width: state.width,
     minHeight: state.height,
     padding: state.padding,
-    borderRadius: state.radius,
-    border: `${state.borderWidth}px solid ${state.border}`,
-    boxShadow: `0 ${Math.round(state.shadow / 3)}px ${state.shadow}px rgba(0,0,0,.28)`,
+    borderRadius: buildRadius(state),
+    border: `${state.borderWidth}px ${state.borderStyle} ${state.border}`,
+    boxShadow: buildShadow(state),
     background: state.background,
     color: state.foreground,
-    fontFamily: state.fontFamily,
+    fontFamily: resolveFont(state),
+    fontStyle: state.fontStyle,
+    textTransform: state.textTransform,
+    textDecoration: state.textDecoration,
+    letterSpacing: `${state.letterSpacing}${state.letterSpacingUnit}`,
+    lineHeight: state.lineHeight,
     opacity: state.disabled ? 0.55 : 1,
   };
 }
@@ -91,7 +115,7 @@ export default function LivePreview({ state }: { state: TableState }) {
               </tr>
             ) : null}
             {!isLoading && !isEmpty ? tableRows.map((row, rowIndex) => (
-              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? `color-mix(in oklab, ${state.accent} 20%, transparent)` : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent", transition: state.motion ? "background 0.2s ease" : "none" }}>
+              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? `color-mix(in oklab, ${state.accent} 20%, transparent)` : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent", transition: state.transitionDuration > 0 ? "background 0.2s ease" : "none" }}>
                 {row.values.map((value, columnIndex) => columnIndex === 0 ? (
                   <th key={`${row.key}-${tableColumns[columnIndex].key}`} scope="row" className="border-b px-4 py-3 text-left text-sm font-semibold" style={{ borderColor: state.border, color: state.foreground }}>
                     {state.selectable ? <input type="checkbox" checked={row.selected} readOnly aria-label={`Select ${row.label}`} className="mr-2 align-middle" /> : null}
