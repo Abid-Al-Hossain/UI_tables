@@ -10,6 +10,9 @@ export function buildReactCode(state: TableState) {
   return `import * as React from "react";
 
 const state = ${JSON.stringify(state, null, 2)};
+function resolveFont(s) { return s.fontBucket === "google" ? '"' + s.googleFontFamily + '", sans-serif' : "inherit"; }
+function buildShadow(s) { if (!s.shadowEnabled) return "none"; var hex = Math.round(s.shadowOpacity * 255).toString(16).padStart(2, "0"); return s.shadowX + "px " + s.shadowY + "px " + s.shadowBlur + "px " + s.shadowSpread + "px " + s.shadowColor + hex; }
+
 
 function panelStyle(config) {
   return {
@@ -17,12 +20,13 @@ function panelStyle(config) {
     minHeight: config.height,
     padding: config.padding,
     borderRadius: config.radius,
-    border: config.borderWidth + "px solid " + config.border,
+    border: config.borderWidth + "px " + config.borderStyle + " " + (config.disabled && config.disabledUseCustomColors ? config.disabledBorder : config.border),
     boxShadow: "0 " + Math.round(config.shadow / 3) + "px " + config.shadow + "px rgba(0,0,0,.28)",
     background: config.background,
     color: config.foreground,
     fontFamily: config.fontFamily,
-    opacity: config.disabled ? 0.55 : 1,
+    opacity: config.disabled ? (config.disabledOpacity ?? 0.5) : 1,
+cursor: config.disabled ? config.disabledCursor : undefined,
     display: "grid",
     gap: 16,
   };
@@ -60,15 +64,25 @@ export default function TableComponent() {
         <h3 id={state.id + "-title"} style={{ fontSize: state.titleSize, fontWeight: state.fontWeight, margin: 0 }}>{state.title}</h3>
         <p style={{ color: state.muted, fontSize: state.bodySize, margin: 0 }}>{state.description}</p>
       </div>
+      {state.filterable && (
+        <input
+          type="search"
+          placeholder={\`Filter \${state.title.toLowerCase()}…\`}
+          aria-label={\`Filter \${state.ariaLabel}\`}
+          style={{ borderRadius: 12, border: "1px solid " + state.border, background: "transparent", padding: "8px 12px", color: state.foreground, fontSize: 14, outline: 0 }}
+        />
+      )}
       <div style={{ overflow: "auto", border: "1px solid " + state.border, borderRadius: 16 }} data-audit="table-preview" data-testid="table-preview">
+        <style>{"#" + state.id + "-table tbody tr.tbl-row:hover { background: " + state.rowHoverBg + " !important; color: " + state.rowHoverText + " !important; }"}</style>
         <table
+          id={state.id + "-table"}
           aria-label={state.ariaLabel}
           aria-rowcount={rowTotal}
           aria-colcount={columnTotal}
           aria-busy={isLoading || undefined}
-          style={{ width: "100%", minWidth: Math.max(state.width - state.padding * 2, columnTotal * 120), borderCollapse: "separate", borderSpacing: 0 }}
+          style={{ width: "100%", minWidth: Math.max(state.width - state.padding * 2, columnTotal * 120), borderCollapse: "separate", borderSpacing: 0, captionSide: state.captionPosition }}
         >
-          <caption style={{ padding: "12px 16px", textAlign: "left", color: state.muted, fontSize: 14 }}>{state.caption}</caption>
+          <caption style={{ padding: state.cellPadding, textAlign: "left", color: state.captionColor, fontSize: state.captionSize }}>{state.caption}</caption>
           <thead>
             <tr>
               {tableColumns.map((column, index) => (
@@ -77,20 +91,24 @@ export default function TableComponent() {
                   scope="col"
                   aria-sort={state.sortable && index === 0 ? "ascending" : undefined}
                   style={{
-                    borderBottom: "1px solid " + state.border,
-                    color: state.muted,
-                    background: state.stickyHeader ? state.background : "transparent",
-                    position: state.stickyHeader ? "sticky" : "static",
+                    position: index === 0 ? "sticky" : state.stickyHeader ? "sticky" : "relative",
+                    left: index === 0 ? 0 : undefined,
+                    borderBottom: state.cellBorderStyle === "none" ? "none" : "1px " + state.cellBorderStyle + " " + state.headerBorder,
+                    borderRight: index === 0 ? "1px solid " + state.pinnedColumnBorder : undefined,
+                    color: state.headerText,
+                    background: index === 0 ? state.pinnedColumnBg : state.headerBg,
                     top: 0,
-                    zIndex: state.stickyHeader ? 1 : "auto",
-                    padding: "12px 16px",
+                    zIndex: index === 0 ? 3 : state.stickyHeader ? 2 : "auto",
+                    padding: state.cellPadding,
                     textAlign: "left",
                     fontSize: 12,
                     letterSpacing: ".14em",
                     textTransform: "uppercase",
                   }}
                 >
-                  {state.sortable && index === 0 ? <button type="button" style={{ color: state.accent, fontWeight: 700, background: "transparent", border: 0, padding: 0 }}>{column.label} asc</button> : column.label}
+                  {index === 0 ? <span aria-hidden="true" style={{ marginRight: 8, color: state.dragHandleColor, cursor: "grab", letterSpacing: "-2px" }}>⠿</span> : null}
+                  {state.sortable ? <span style={{ color: index === 0 ? state.headerSortActiveColor : state.headerSortColor, fontWeight: index === 0 ? 700 : 400 }}>{column.label} {index === 0 ? "↓" : "↕"}</span> : column.label}
+                  {index < columnTotal - 1 ? <span aria-hidden="true" style={{ position: "absolute", top: 6, bottom: 6, right: 0, width: 2, background: state.resizeHandleColor, cursor: "col-resize", opacity: 0.6 }} /> : null}
                 </th>
               ))}
             </tr>
@@ -98,27 +116,39 @@ export default function TableComponent() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={columnTotal} role="status" style={{ padding: "32px 16px", textAlign: "center", color: state.muted, fontSize: 14 }}>Loading table rows...</td>
+                <td colSpan={columnTotal} role="status" style={{ padding: state.cellPadding * 2, textAlign: "center", background: state.emptyStateBg, color: state.emptyStateText, fontSize: 14 }}>Loading table rows...</td>
               </tr>
             ) : null}
             {isEmpty ? (
               <tr>
-                <td colSpan={columnTotal} style={{ padding: "32px 16px", textAlign: "center", color: state.muted, fontSize: 14 }}>No rows match the current table state.</td>
+                <td colSpan={columnTotal} style={{ padding: state.cellPadding * 2, textAlign: "center", background: state.emptyStateBg, color: state.emptyStateText, fontSize: 14 }}>No rows match the current table state.</td>
               </tr>
             ) : null}
-            {!isLoading && !isEmpty ? tableRows.map((row, rowIndex) => (
-              <tr key={row.key} aria-selected={state.selectable ? row.selected : undefined} style={{ background: row.selected ? "color-mix(in oklab, " + state.accent + " 20%, transparent)" : state.zebraRows && rowIndex % 2 === 1 ? "rgba(255,255,255,.05)" : "transparent", transition: state.transitionDuration > 0 ? "$1" : "none" }}>
+            {!isLoading && !isEmpty ? tableRows.map((row, rowIndex) => {
+              const cellBorder = state.cellBorderStyle === "none" ? "none" : "1px " + state.cellBorderStyle + " " + state.cellBorderColor;
+              const rowBg = row.selected ? state.rowSelectedBg : state.zebraRows ? (rowIndex % 2 === 1 ? state.zebraEvenBg : state.zebraOddBg) : "transparent";
+              const rowColor = row.selected ? state.rowSelectedText : state.foreground;
+              return (
+              <tr key={row.key} className="tbl-row" aria-selected={state.selectable ? row.selected : undefined} style={{ background: rowBg, color: rowColor, boxShadow: row.selected ? "inset 2px 0 0 " + state.rowSelectedBorder : undefined, transition: state.transitionDuration > 0 ? "all " + state.transitionDuration + "ms " + state.transitionEasing : "none" }}>
                 {row.values.map((value, columnIndex) => columnIndex === 0 ? (
-                  <th key={row.key + "-" + tableColumns[columnIndex].key} scope="row" style={{ borderBottom: "1px solid " + state.border, color: state.foreground, padding: "12px 16px", textAlign: "left", fontSize: 14, fontWeight: 700 }}>
-                    {state.selectable ? <input type="checkbox" checked={row.selected} readOnly aria-label={"Select " + row.label} style={{ marginRight: 8, verticalAlign: "middle" }} /> : null}
+                  <th key={row.key + "-" + tableColumns[columnIndex].key} scope="row" style={{ position: "sticky", left: 0, borderBottom: cellBorder, borderRight: "1px solid " + state.pinnedColumnBorder, color: "inherit", background: row.selected ? state.rowSelectedBg : state.pinnedColumnBg, padding: state.cellPadding, textAlign: "left", fontSize: 14, fontWeight: 700, zIndex: 1 }}>
+                    {state.selectable ? <input type="checkbox" checked={row.selected} readOnly aria-label={"Select " + row.label} style={{ marginRight: 8, verticalAlign: "middle", accentColor: state.checkboxCheckedBg, borderColor: state.checkboxColor }} /> : null}
                     {value}
                   </th>
                 ) : (
-                  <td key={row.key + "-" + tableColumns[columnIndex].key} style={{ borderBottom: "1px solid " + state.border, color: state.foreground, padding: "12px 16px", fontSize: 14 }}>{value}</td>
+                  <td key={row.key + "-" + tableColumns[columnIndex].key} style={{ borderBottom: cellBorder, color: "inherit", padding: state.cellPadding, fontSize: 14 }}>{value}</td>
                 ))}
               </tr>
-            )) : null}
+              );
+            }) : null}
           </tbody>
+          {!isLoading && !isEmpty ? (
+            <tfoot>
+              <tr>
+                <td colSpan={columnTotal} style={{ padding: state.cellPadding, textAlign: "left", fontSize: 12, background: state.footerBg, color: state.footerText, borderTop: "1px solid " + state.footerBorder }}>Showing {rowTotal} {rowTotal === 1 ? "row" : "rows"} across {columnTotal} columns.</td>
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
       <p id={state.id + "-meta"} style={{ color: state.muted, fontSize: 12, margin: 0 }}>

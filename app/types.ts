@@ -1,4 +1,4 @@
-export type SectionId = "presets" | "basics" | "metadata" | "content" | "items" | "behavior" | "layout" | "placement" | "sizing" | "colors" | "border" | "radius" | "shadow" | "typography" | "transitions" | "focus-ring" | "states" | "accessibility";
+export type SectionId = "presets" | "basics" | "metadata" | "content" | "items" | "behavior" | "layout" | "placement" | "sizing" | "colors" | "border" | "radius" | "shadow" | "typography" | "transitions" | "focus-ring" | "states" | "disabled" | "accessibility";
 
 export type TableState = {
   title: string;
@@ -54,19 +54,62 @@ export type TableState = {
   muted: string;
   accent: string;
   border: string;
+  itemActiveBg: string;
   titleSize: number;
   bodySize: number;
   fontWeight: number;
   previewState: "default" | "hover" | "focus" | "active" | "open" | "closed" | "selected" | "loading" | "empty" | "error" | "success";
   disabled: boolean;
+  disabledOpacity: number;
+  disabledCursor: "not-allowed" | "default" | "pointer";
+  disabledUseCustomColors: boolean;
+  disabledBg: string;
+  disabledText: string;
+  disabledBorder: string;
   role: "table";
   rowCount: number;
   columnCount: number;
   sortable: boolean;
   selectable: boolean;
+  filterable: boolean;
   stickyHeader: boolean;
   zebraRows: boolean;
   caption: string;
+  // Header
+  headerBg: string;
+  headerText: string;
+  headerBorder: string;
+  headerSortColor: string;
+  headerSortActiveColor: string;
+  // Rows
+  rowHoverBg: string;
+  rowHoverText: string;
+  rowSelectedBg: string;
+  rowSelectedText: string;
+  rowSelectedBorder: string;
+  zebraOddBg: string;
+  zebraEvenBg: string;
+  // Cells
+  cellPadding: number;
+  cellBorderColor: string;
+  cellBorderStyle: "solid" | "dashed" | "none";
+  // Footer
+  footerBg: string;
+  footerText: string;
+  footerBorder: string;
+  // Empty / caption
+  emptyStateBg: string;
+  emptyStateText: string;
+  captionColor: string;
+  captionSize: number;
+  captionPosition: "top" | "bottom";
+  // Selection & affordances
+  checkboxColor: string;
+  checkboxCheckedBg: string;
+  resizeHandleColor: string;
+  dragHandleColor: string;
+  pinnedColumnBg: string;
+  pinnedColumnBorder: string;
 };
 
 export type StudioPreset = { id: string; family: string; archetype: string; variant: string; size: string; tags: string[]; state: Partial<TableState> & Record<string, unknown> };
@@ -139,6 +182,10 @@ export const SECTIONS: Array<{ id: SectionId; label: string }> = [
   {
     "id": "states",
     "label": "State Preview"
+  },
+  {
+    "id": "disabled",
+    "label": "Disabled"
   },
   {
     "id": "accessibility",
