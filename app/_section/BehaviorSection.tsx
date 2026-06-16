@@ -19,9 +19,11 @@ export default function BehaviorSection({ state, update }: Props) {
         <Switch label="Filterable" checked={state.filterable} onChange={(value) => update("filterable", value)} />
       </SectionCard>
       <SectionCard title="Layout" subtitle="Visual layout behavior.">
+      <div className="space-y-4">
         <Switch label="Sticky header" checked={state.stickyHeader} onChange={(value) => update("stickyHeader", value)} />
         <Switch label="Zebra rows" checked={state.zebraRows} onChange={(value) => update("zebraRows", value)} />
-      </SectionCard>
+      </div>
+    </SectionCard>
     </div>
   );
 }
